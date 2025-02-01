@@ -1,0 +1,11 @@
+ - Antes de crear el proyecto
+    npm install -g @nestjs/cli
+ - Luego de crear el proyecto
+    npm install
+ - Para el desarrollo del proyecto
+    - Primero eliminamos el caché de npm que impide la intalcion
+        npm cache clean --force
+    - Procedemos con la intalción de dependencias
+        npm install @veramo/core @veramo/credential-w3c @veramo/data-store @veramo/did-manager @veramo/key-manager @veramo/did-provider-key @veramo/kms-local sqlite3
+    - Instalaciones adicionales
+        npm install @veramo/did-resolver ethr-did-resolver @veramo/kms-local @veramo/data-store typeorm
