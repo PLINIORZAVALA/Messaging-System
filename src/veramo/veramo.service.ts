@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { createAgent, IResolver, IDataStore, IKeyManager, ICredentialIssuer } from '@veramo/core';
 import { CredentialIssuer } from '@veramo/credential-w3c';
 import { DIDManager } from '@veramo/did-manager';
@@ -7,56 +7,50 @@ import { KeyManagementSystem } from '@veramo/kms-local';
 import { DIDResolverPlugin } from '@veramo/did-resolver';
 import { Resolver } from 'did-resolver';
 import { getResolver } from 'ethr-did-resolver';
-import { DataStore, DataStoreORM } from '@veramo/data-store';
-import { Entities, KeyStore, DIDStore, migrations } from '@veramo/data-store';
+import { DataStore, DataStoreORM, PrivateKeyStore, KeyStore, DIDStore, Entities, migrations } from '@veramo/data-store';
 import { DataSource } from 'typeorm';
 
 @Injectable()
-export class VeramoService {
+export class VeramoService implements OnModuleInit {
   public agent;
+  private dbConnection: DataSource;
 
-  constructor() {
-    // Configuración de SQLite para almacenar datos
-    const dbConnection = new DataSource({
+  async onModuleInit() {
+    this.dbConnection = new DataSource({
       type: 'sqlite',
-      database: './veramo.sqlite', // Base de datos SQLite
-      synchronize: true, // Sincroniza automáticamente el esquema
-      entities: Entities, // Importa las entidades de Veramo
-      migrations: migrations, // Importa las migraciones de Veramo
+      database: './veramo.sqlite',
+      synchronize: true,
+      entities: Entities,
+      migrations: migrations,
     });
+    await this.dbConnection.initialize();
 
-    // Configuración del agente Veramo
     this.agent = createAgent<IResolver & IDataStore & IKeyManager & ICredentialIssuer>({
       plugins: [
-        // Gestión de claves
         new KeyManager({
-          store: new KeyStore(dbConnection), // Almacena claves en SQLite
+          store: new KeyStore(this.dbConnection), // Cambio aquí
           kms: {
-            local: new KeyManagementSystem(new KeyStore(dbConnection)), // Usa el sistema de gestión de claves local
+            local: new KeyManagementSystem(new PrivateKeyStore(this.dbConnection)), // Cambio aquí
           },
         }),
-        // Gestión de DIDs
         new DIDManager({
-          store: new DIDStore(dbConnection), // Almacena DIDs en SQLite
-          defaultProvider: 'did:ethr:rinkeby', // Proveedor de DIDs por defecto
+          store: new DIDStore(this.dbConnection),
+          defaultProvider: 'did:ethr:rinkeby',
           providers: {
-            'did:ethr:rinkeby': require('@veramo/did-provider-ethr').EthrDIDProvider({
-              defaultKms: 'local', // Usa el KMS local
-              network: 'rinkeby', // Red Ethereum Rinkeby
+            'did:ethr:rinkeby': new (require('@veramo/did-provider-ethr').EthrDIDProvider)({
+              defaultKms: 'local',
+              network: 'rinkeby',
             }),
           },
         }),
-        // Resolución de DIDs
         new DIDResolverPlugin({
           resolver: new Resolver({
             ...getResolver({ networks: [{ name: 'rinkeby', rpcUrl: 'https://rinkeby.infura.io/v3/YOUR_INFURA_PROJECT_ID' }] }),
           }),
         }),
-        // Emisión de credenciales verificables
         new CredentialIssuer(),
-        // Almacenamiento de datos
-        new DataStore(dbConnection),
-        new DataStoreORM(dbConnection),
+        new DataStore(this.dbConnection),
+        new DataStoreORM(this.dbConnection),
       ],
     });
   }
