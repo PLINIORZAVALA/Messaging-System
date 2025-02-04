@@ -5,6 +5,7 @@
   "author": "",
   "private": true,
   "license": "UNLICENSED",
+  "type": "module", 
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
@@ -20,22 +21,27 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
-    "@nestjs/common": "^11.0.1",
-    "@nestjs/core": "^11.0.1",
+    "@nestjs/common": "^11.0.7",
+    "@nestjs/core": "^11.0.7",
+    "@nestjs/mapped-types": "*",
     "@nestjs/platform-express": "^11.0.1",
     "@veramo/core": "^6.0.0",
     "@veramo/credential-w3c": "^6.0.0",
     "@veramo/data-store": "^6.0.0",
     "@veramo/did-manager": "^6.0.0",
+    "@veramo/did-provider-ethr": "^6.0.0",
     "@veramo/did-provider-key": "^6.0.0",
+    "@veramo/did-provider-web": "^6.0.0",
     "@veramo/did-resolver": "^6.0.0",
     "@veramo/key-manager": "^6.0.0",
     "@veramo/kms-local": "^6.0.0",
+    "did-resolver": "^4.1.0",
     "ethr-did-resolver": "^11.0.3",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "sqlite3": "^5.1.7",
-    "typeorm": "^0.3.20"
+    "typeorm": "^0.3.20",
+    "web-did-resolver": "^2.0.29"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
