@@ -12,7 +12,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
       port: 3306,
       username: 'root',  // Asegúrate de que el usuario y la contraseña sean correctos
       password: '',      // Si tienes una contraseña, colócala aquí
-      database: 'credential',  // Asegúrate de que esta base de datos exista
+      database: 'cretdent',  // Asegúrate de que esta base de datos exista
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       synchronize: false, // Evitar en producción, en desarrollo puedes usar true si quieres que la base se sincronice automáticamente
     }),
