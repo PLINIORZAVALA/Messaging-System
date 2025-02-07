@@ -1,4 +1,4 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, Get } from '@nestjs/common';
 import { CredentialService } from './credential.service';
 import { CreateCredentialDTO } from '../dto/create-credential.dto';
 import { Credential } from '../entity/credential.entity';
@@ -10,5 +10,10 @@ export class CredentialController {
   @Post('create')
   async createCredential(@Body() credentialData: CreateCredentialDTO): Promise<Credential> {
     return this.credentialService.createCredential(credentialData);
+  }
+
+  @Get('test')
+  testEndpoint() {
+    return { message: 'El controlador está funcionando' };
   }
 }
