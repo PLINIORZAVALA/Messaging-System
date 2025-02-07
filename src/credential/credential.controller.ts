@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param } from '@nestjs/common';
 import { CredentialService } from './credential.service';
 import { CreateCredentialDTO } from '../dto/create-credential.dto';
 
@@ -15,4 +15,5 @@ export class CredentialController {
   testEndpoint() {
     return { message: 'El controlador está funcionando' };
   }
+
 }

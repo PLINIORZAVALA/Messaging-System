@@ -33,7 +33,6 @@ export class CredentialService {
 
     // Añadimos la firma al objeto de la credencial
     const signedCredential = {
-      id: `urn:uuid:${this.generateUUID()}`,  // Genera un ID único para la credencial
       credential: credential,  // Asignamos el objeto de la credencial original
       proof: {
         type: 'Ed25519Signature2018',
@@ -43,12 +42,15 @@ export class CredentialService {
       },
     };
 
-    // Guardar la credencial firmada en la base de datos
+    // Crear la entidad Credential para guardar en la base de datos
     const credentialEntity = new Credential();
-    credentialEntity.credential = signedCredential;  // Asigna la credencial firmada
+    credentialEntity.credential = signedCredential;  // Asignamos la credencial firmada
+
+    // Guardar la credencial firmada en la base de datos
     await this.credentialRepository.save(credentialEntity);
 
-    return signedCredential;
+    // Retornar la entidad almacenada (incluye el ID autogenerado)
+    return credentialEntity; 
   }
 
   // Función para firmar los datos con Ed25519
@@ -56,10 +58,5 @@ export class CredentialService {
     // Creamos el objeto que representa la firma
     const signObject = sign(null, Buffer.from(data), privateKey);
     return signObject; // Retornamos la firma
-  }
-
-  // Función auxiliar para generar UUID
-  private generateUUID(): string {
-    return Math.floor(Math.random() * 1e6).toString();  // Genera un UUID simple
   }
 }
