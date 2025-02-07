@@ -1,0 +1,5 @@
+npm install jsonld-signatures @digitalbazaar/ed25519-signature-2020 @digitalbazaar/ed25519-verification-key-202 -> para realizar las firmas
+npm install @digitalbazaar/ed25519-signature-2020 @digitalbazaar/ed25519-verification-key-2020
+npm install jsonld
+
+tweetnacl: Esta es una biblioteca criptográfica para Node.js que proporciona una implementación eficiente y sencilla de la firma digital, entre otras operaciones criptográficas. L
