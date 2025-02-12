@@ -26,7 +26,7 @@ export class CredentialService {
     const { privateKey, publicKey } = generateKeyPairSync('ed25519', {
       privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
       publicKeyEncoding: { type: 'spki', format: 'pem' },
-    });
+    });// -> Se busca que el issuer ya tenga la clave 
 
     // Firma la credencial con la clave privada
     const signature = this.signWithEd25519(privateKey, JSON.stringify(credential));
