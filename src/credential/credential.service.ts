@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Credential } from '../entity/credential.entity';
 import { CreateCredentialDTO } from '../dto/create-credential.dto';
-import { generateKeyPairSync, sign } from 'crypto'; // Usamos la librería 'crypto' para crear la firma
+import { generateKeyPairSync, sign } from 'crypto';
 
 @Injectable()
 export class CredentialService {
@@ -11,6 +11,20 @@ export class CredentialService {
     @InjectRepository(Credential)
     private credentialRepository: Repository<Credential>,
   ) {}
+
+  // Get all credentials
+  async getAllCredentials(): Promise<Credential[]> {
+    return await this.credentialRepository.find();
+  }
+
+  // Get credential by ID
+  async getCredentialById(id: number): Promise<Credential> {
+    const credential = await this.credentialRepository.findOne({ where: { id } });
+    if (!credential) {
+      throw new NotFoundException(`Credential with ID ${id} not found`);
+    }
+    return credential;
+  }
 
   // Crear, firmar y guardar la credencial en la base de datos
   async createCredential(credentialData: CreateCredentialDTO): Promise<Credential> {
