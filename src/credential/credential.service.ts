@@ -29,9 +29,15 @@ export class CredentialService {
   // Crear, firmar y guardar la credencial en la base de datos
   async createCredential(credentialData: CreateCredentialDTO): Promise<Credential> {
     const credential = {
-      "@context": "https://www.w3.org/ns/credentials/v2",
-      "type": "VerifiableCredential",
-      "credentialSubject": {
+      "@context": [
+        "https://www.w3.org/ns/credentials/v2",
+        "https://www.w3.org/ns/credentials/examples/v2"
+      ],
+      "id": "http://university.example/credentials/3732",
+      "type": ["VerifiableCredential", "ExampleDegreeCredential"],
+      "issuer": "https://university.example/issuers/565049",
+      "ValidFrom": new Date().toISOString(),
+      "credentialSubject": { // Falta colocar el id (identificador de sujeto)
         ...credentialData,  // Usa los datos de la credencial
       },
     };
@@ -49,10 +55,12 @@ export class CredentialService {
     const signedCredential = {
       credential: credential,  // Asignamos el objeto de la credencial original
       proof: {
-        type: 'Ed25519Signature2018',
+        type: "DataIntegrityProof",
+        crytoduite: 'Ed25519Signature2018',
         created: new Date().toISOString(),
-        creator: 'did:example:1234567890', // Agrega el DID correspondiente
-        signatureValue: signature.toString('base64'),
+        verificationMethod: "https://university.example/issuers/14#key-1",
+        proofPurpose: "assertionMethod",
+        proofValue: signature.toString('base64'),
       },
     };
 
