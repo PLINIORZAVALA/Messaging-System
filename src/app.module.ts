@@ -4,6 +4,7 @@ import { AppService } from './app.service';
 import { CredentialModule } from './credential/credential.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { IssuerKeyModule } from './issuer-key/issuer-key.module';
+import { IssuerModule } from './issuer/issuer.module';
 
 @Module({
   imports: [
@@ -18,7 +19,8 @@ import { IssuerKeyModule } from './issuer-key/issuer-key.module';
       synchronize: true, // Evitar en producción, en desarrollo puedes usar true si quieres que la base se sincronice automáticamente
     }),
     CredentialModule,
-    IssuerKeyModule
+    IssuerKeyModule,
+    IssuerModule
   ],
   controllers: [AppController],
   providers: [AppService],
