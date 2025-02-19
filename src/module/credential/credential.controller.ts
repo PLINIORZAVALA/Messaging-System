@@ -1,6 +1,6 @@
 import { Controller, Post, Body, Get, Param, ParseIntPipe } from '@nestjs/common';
 import { CredentialService } from './credential.service';
-import { CreateCredentialDTO } from '../dto/create-credential.dto';
+import { CreateCredentialDTO } from 'src/dto/create-credential.dto';
 
 @Controller('credential')
 export class CredentialController {

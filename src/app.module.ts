@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { CredentialModule } from './credential/credential.module';
+import { CredentialModule } from './module/credential/credential.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { IssuerKeyModule } from './issuer-key/issuer-key.module';
-import { IssuerModule } from './issuer/issuer.module';
+import { IssuerKeyModule } from './module/issuer-key/issuer-key.module';
+import { IssuerModule } from './module/issuer/issuer.module';
 
 @Module({
   imports: [

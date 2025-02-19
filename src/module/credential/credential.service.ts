@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Credential } from '../entity/credential.entity';
-import { CreateCredentialDTO } from '../dto/create-credential.dto';
+import { Credential } from 'src/entity/credential.entity';
+import { CreateCredentialDTO } from 'src/dto/create-credential.dto';
 import { generateKeyPairSync, sign } from 'crypto';
 
 @Injectable()

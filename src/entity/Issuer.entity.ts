@@ -17,3 +17,7 @@ export class Issuer {
   @OneToMany(() => Credential, (credential) => credential.issuer)
   credentials: Credential[]; // Lista de credenciales emitidas por el Issuer
 }
+
+/*
+
+*/
