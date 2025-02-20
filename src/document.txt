@@ -1,0 +1,365 @@
+¡Claro! Aquí tienes un **paso a paso completo** desde la creación del `Issuer`, la generación de `IssuerKey`, hasta la firma de la credencial. Este proceso está diseñado para ser documentado y compartido con tu equipo.
+
+---
+
+## **Paso a paso completo**
+
+### **1. Crear el `Issuer`**
+El `Issuer` es la entidad que emite las credenciales. Primero, debes crear un `Issuer` en la base de datos.
+
+#### **Endpoint para crear un `Issuer`**:
+- **Método**: `POST`
+- **URL**: `http://localhost:3000/issuer/create`
+- **Body** (JSON):
+  ```json
+  {
+    "name": "Universidad UNI"
+  }
+  ```
+
+#### **Código del servicio (`IssuerService`)**:
+```typescript
+// src/module/issuer/issuer.service.ts
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Issuer } from 'src/entity/Issuer.entity';
+
+@Injectable()
+export class IssuerService {
+  constructor(
+    @InjectRepository(Issuer)
+    private issuerRepository: Repository<Issuer>,
+  ) {}
+
+  async createIssuer(name: string): Promise<Issuer> {
+    const issuer = new Issuer();
+    issuer.name = name;
+    return await this.issuerRepository.save(issuer);
+  }
+}
+```
+
+#### **Código del controlador (`IssuerController`)**:
+```typescript
+// src/module/issuer/issuer.controller.ts
+import { Controller, Post, Body } from '@nestjs/common';
+import { IssuerService } from './issuer.service';
+
+@Controller('issuer')
+export class IssuerController {
+  constructor(private readonly issuerService: IssuerService) {}
+
+  @Post('create')
+  async createIssuer(@Body('name') name: string) {
+    return await this.issuerService.createIssuer(name);
+  }
+}
+```
+
+---
+
+### **2. Crear el `IssuerKey`**
+El `IssuerKey` contiene las claves (privada y pública) que se utilizan para firmar y verificar las credenciales.
+
+#### **Endpoint para crear un `IssuerKey`**:
+- **Método**: `POST`
+- **URL**: `http://localhost:3000/issuer-key/create/:issuerId`
+- **Body**: Vacío (se generan las claves automáticamente).
+
+#### **Código del servicio (`IssuerKeyService`)**:
+```typescript
+// src/module/issuer-key/issuer-key.service.ts
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { IssuerKey } from 'src/entity/IssuerKey.entity';
+import { Issuer } from 'src/entity/Issuer.entity';
+import { generateKeyPairSync } from 'crypto';
+
+@Injectable()
+export class IssuerKeyService {
+  constructor(
+    @InjectRepository(IssuerKey)
+    private issuerKeyRepository: Repository<IssuerKey>,
+    @InjectRepository(Issuer)
+    private issuerRepository: Repository<Issuer>,
+  ) {}
+
+  async createIssuerKey(issuerId: number): Promise<IssuerKey> {
+    const issuer = await this.issuerRepository.findOne({
+      where: { id: issuerId },
+    });
+    if (!issuer) {
+      throw new NotFoundException(`Issuer with ID ${issuerId} not found`);
+    }
+
+    // Generar un par de claves (privada y pública)
+    const { privateKey, publicKey } = generateKeyPairSync('rsa', {
+      modulusLength: 2048,
+      publicKeyEncoding: {
+        type: 'spki',
+        format: 'pem',
+      },
+      privateKeyEncoding: {
+        type: 'pkcs8',
+        format: 'pem',
+      },
+    });
+
+    const issuerKey = new IssuerKey();
+    issuerKey.privateKey = privateKey;
+    issuerKey.publicKey = publicKey;
+    issuerKey.issuer = issuer;
+
+    return await this.issuerKeyRepository.save(issuerKey);
+  }
+}
+```
+
+#### **Código del controlador (`IssuerKeyController`)**:
+```typescript
+// src/module/issuer-key/issuer-key.controller.ts
+import { Controller, Post, Param, ParseIntPipe } from '@nestjs/common';
+import { IssuerKeyService } from './issuer-key.service';
+
+@Controller('issuer-key')
+export class IssuerKeyController {
+  constructor(private readonly issuerKeyService: IssuerKeyService) {}
+
+  @Post('create/:issuerId')
+  async createIssuerKey(@Param('issuerId', ParseIntPipe) issuerId: number) {
+    return await this.issuerKeyService.createIssuerKey(issuerId);
+  }
+}
+```
+
+---
+
+### **3. Crear y firmar una credencial**
+Una vez que tienes un `Issuer` y un `IssuerKey`, puedes crear y firmar una credencial.
+
+#### **Endpoint para crear una credencial**:
+- **Método**: `POST`
+- **URL**: `http://localhost:3000/credential/create`
+- **Body** (JSON):
+  ```json
+  {
+    "credentialSubject": {
+      "email": "junitoPerez@gmail.com",
+      "name": "Juan Pérez"
+    },
+    "issuerId": 1,
+    "publicKeyId": 1
+  }
+  ```
+
+#### **Código del servicio (`CredentialService`)**:
+```typescript
+// src/module/credential/credential.service.ts
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Credential } from 'src/entity/credential.entity';
+import { Issuer } from 'src/entity/Issuer.entity';
+import { IssuerKey } from 'src/entity/IssuerKey.entity';
+import { CreateCredentialDTO } from 'src/dto/create-credential.dto';
+import { sign } from 'crypto';
+
+@Injectable()
+export class CredentialService {
+  constructor(
+    @InjectRepository(Credential)
+    private credentialRepository: Repository<Credential>,
+    @InjectRepository(Issuer)
+    private issuerRepository: Repository<Issuer>,
+    @InjectRepository(IssuerKey)
+    private issuerKeyRepository: Repository<IssuerKey>,
+  ) {}
+
+  async createCredential(
+    credentialData: CreateCredentialDTO,
+    issuerId: number,
+    publicKeyId: number,
+  ) {
+    // Buscar el Issuer
+    const issuer = await this.issuerRepository.findOne({
+      where: { id: issuerId },
+      relations: ['privateKey'],
+    });
+    if (!issuer) {
+      throw new NotFoundException(`Issuer with ID ${issuerId} not found`);
+    }
+
+    // Buscar la clave pública
+    const publicKey = await this.issuerKeyRepository.findOne({
+      where: { id: publicKeyId },
+    });
+    if (!publicKey) {
+      throw new NotFoundException(`PublicKey with ID ${publicKeyId} not found`);
+    }
+
+    // Crear el objeto de la credencial
+    const credential = {
+      "@context": [
+        "https://www.w3.org/ns/credentials/v2",
+        "https://www.w3.org/ns/credentials/examples/v2",
+      ],
+      "id": `http://university.example/credentials/${Math.floor(Math.random() * 10000)}`,
+      "type": ["VerifiableCredential", "ExampleDegreeCredential"],
+      "issuer": issuer.id,
+      "ValidFrom": new Date().toISOString(),
+      "credentialSubject": {
+        ...credentialData.credentialSubject,
+      },
+    };
+
+    // Firmar la credencial con la clave privada del Issuer
+    const signature = this.signWithEd25519(
+      issuer.privateKey.privateKey,
+      JSON.stringify(credential),
+    );
+
+    // Crear la credencial firmada
+    const signedCredential = {
+      ...credential,
+      proof: {
+        type: "DataIntegrityProof",
+        cryptosuite: 'Ed25519Signature2018',
+        created: new Date().toISOString(),
+        verificationMethod: `https://university.example/issuers/${issuerId}#key-1`,
+        proofPurpose: "assertionMethod",
+        proofValue: signature.toString('base64'),
+      },
+    };
+
+    // Guardar la credencial en la base de datos
+    const credentialEntity = new Credential();
+    credentialEntity.credential = signedCredential;
+    credentialEntity.issuer = issuer;
+    credentialEntity.publicKey = publicKey;
+
+    await this.credentialRepository.save(credentialEntity);
+
+    // Retornar la credencial firmada
+    return {
+      id: credentialEntity.id,
+      credential: signedCredential,
+      issuer: {
+        id: issuer.id,
+        name: issuer.name,
+      },
+      publicKey: {
+        id: publicKey.id,
+        publicKey: publicKey.publicKey,
+      },
+    };
+  }
+
+  // Función para firmar con Ed25519
+  private signWithEd25519(privateKey: string, data: string): Buffer {
+    const signObject = sign(null, Buffer.from(data), privateKey);
+    return signObject;
+  }
+}
+```
+
+#### **Código del controlador (`CredentialController`)**:
+```typescript
+// src/module/credential/credential.controller.ts
+import { Controller, Post, Body, ParseIntPipe } from '@nestjs/common';
+import { CredentialService } from './credential.service';
+import { CreateCredentialDTO } from 'src/dto/create-credential.dto';
+
+@Controller('credential')
+export class CredentialController {
+  constructor(private readonly credentialService: CredentialService) {}
+
+  @Post('create')
+  async createCredential(
+    @Body() credentialData: CreateCredentialDTO,
+    @Body('issuerId', ParseIntPipe) issuerId: number,
+    @Body('publicKeyId', ParseIntPipe) publicKeyId: number,
+  ) {
+    return await this.credentialService.createCredential(
+      credentialData,
+      issuerId,
+      publicKeyId,
+    );
+  }
+}
+```
+
+---
+
+### **4. Probar el flujo completo**
+
+1. **Crear un `Issuer`**:
+   - **Endpoint**: `POST /issuer/create`
+   - **Body**:
+     ```json
+     {
+       "name": "Universidad UNI"
+     }
+     ```
+
+2. **Crear un `IssuerKey`**:
+   - **Endpoint**: `POST /issuer-key/create/1` (donde `1` es el ID del `Issuer`).
+
+3. **Crear y firmar una credencial**:
+   - **Endpoint**: `POST /credential/create`
+   - **Body**:
+     ```json
+     {
+       "credentialSubject": {
+         "email": "junitoPerez@gmail.com",
+         "name": "Juan Pérez"
+       },
+       "issuerId": 1,
+       "publicKeyId": 1
+     }
+     ```
+
+---
+
+### **5. Documentar el proceso**
+
+Puedes documentar este proceso en un archivo `README.md` o en la documentación de tu proyecto. Aquí tienes un ejemplo de cómo podrías estructurarlo:
+
+#### **Documentación**
+
+1. **Crear un `Issuer`**:
+   - **Endpoint**: `POST /issuer/create`
+   - **Body**:
+     ```json
+     {
+       "name": "Nombre del Issuer"
+     }
+     ```
+
+2. **Crear un `IssuerKey`**:
+   - **Endpoint**: `POST /issuer-key/create/:issuerId`
+   - **Parámetro**: `issuerId` (ID del `Issuer`).
+
+3. **Crear y firmar una credencial**:
+   - **Endpoint**: `POST /credential/create`
+   - **Body**:
+     ```json
+     {
+       "credentialSubject": {
+         "email": "correo@ejemplo.com",
+         "name": "Nombre del sujeto"
+       },
+       "issuerId": 1,
+       "publicKeyId": 1
+     }
+     ```
+
+4. **Verificar la credencial**:
+   - La credencial puede ser verificada utilizando la clave pública del `Issuer`.
+
+---
+
+### **Conclusión**
+
+Este paso a paso completo te permitirá crear un `Issuer`, generar un `IssuerKey`, y firmar una credencial de manera clara y consistente. Si necesitas más detalles o ajustes, ¡no dudes en decírmelo! 😊
