@@ -51,7 +51,7 @@ export class CredentialService {
     if (!issuer) {
       throw new NotFoundException(`Issuer with ID ${issuerId} not found`);
     }
-  
+
     // Buscar la clave pública
     const publicKey = await this.issuerKeyRepository.findOne({
       where: { id: publicKeyId },
@@ -59,7 +59,10 @@ export class CredentialService {
     if (!publicKey) {
       throw new NotFoundException(`PublicKey with ID ${publicKeyId} not found`);
     }
-  
+
+    // Generar el DID del Issuer
+    const issuerDid = this.generateDid(issuer.id);
+
     // Crear el objeto de la credencial
     const credential = {
       "@context": [
@@ -68,53 +71,58 @@ export class CredentialService {
       ],
       "id": `http://university.example/credentials/${Math.floor(Math.random() * 10000)}`,
       "type": ["VerifiableCredential", "ExampleDegreeCredential"],
-      "issuer": issuer.id,
+      "issuer": issuerDid,
       "ValidFrom": new Date().toISOString(),
       "credentialSubject": {
         ...credentialData.credentialSubject,
       },
     };
-  
+
     // Firmar la credencial con la clave privada del Issuer
     const signature = this.signWithEd25519(
       issuer.privateKey.privateKey,
       JSON.stringify(credential),
     );
-  
+
     // Crear la credencial firmada
     const signedCredential = {
-      ...credential, // Incluir directamente la credencial
+      ...credential,
       proof: {
         type: "DataIntegrityProof",
         cryptosuite: 'Ed25519Signature2018',
         created: new Date().toISOString(),
-        verificationMethod: `https://university.example/issuers/${issuerId}#key-1`,
+        verificationMethod: `${issuerDid}#key-1`,
         proofPurpose: "assertionMethod",
         proofValue: signature.toString('base64'),
       },
     };
-  
+
     // Guardar la credencial en la base de datos
     const credentialEntity = new Credential();
     credentialEntity.credential = signedCredential;
     credentialEntity.issuer = issuer;
     credentialEntity.publicKey = publicKey;
-  
+
     await this.credentialRepository.save(credentialEntity);
-  
-    // Retornar la respuesta simplificada
+
     return {
       id: credentialEntity.id,
-      credential: signedCredential, // Credencial firmada
+      credential: signedCredential,
       issuer: {
         id: issuer.id,
         name: issuer.name,
+        did: issuerDid,
       },
       publicKey: {
         id: publicKey.id,
         publicKey: publicKey.publicKey,
       },
     };
+  }
+
+  // Función para generar un DID
+  private generateDid(issuerId: number): string {
+    return `did:ion:${issuerId}`;
   }
 
   // Función para firmar con Ed25519
